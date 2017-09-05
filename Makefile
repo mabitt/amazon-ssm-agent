@@ -9,6 +9,8 @@ DOCKER_IMAGE_REPO      ?= johnt337
 UNIT                   ?= amazon-ssm-agent
 UID                    ?= $(shell id -u)
 USER                   ?= $(shell id -n)
+VERSION                ?= $(shell cat version)
+PROJECT_URL            ?= https://github.com/johnt337/${UNIT}/
 
 # version arguments
 GOLANG_VERSION         ?= 1.8.3-alpine3.6
@@ -52,6 +54,7 @@ help:
 all/%:
 	$(MAKE) get-release-info
 	$(MAKE) download
+	$(MAKE) bin/$*
 	$(MAKE) lint/$*
 	$(MAKE) image/$*
 	$(MAKE) push/$*
@@ -97,11 +100,15 @@ bin/%: ${UNIT}
 	  golang:${GOLANG_VERSION} \
 	  /bin/sh -c 'apk add --no-cache bash git make && make build-linux && mv bin/linux_amd64/amazon-ssm-agent $$BIN_DIR/amazon-ssm-agent && cp $$SRC_DIR/amazon-ssm-agent.json.template $$CONF_DIR/amazon-ssm-agent.json && cp $$SRC_DIR/seelog_unix.xml $$CONF_DIR/seelog.xml'
 
-image/%: ${UNIT}.Dockerfile stage/${BIN_DIR}/${UNIT}
+image/%:
 	@echo "building image for ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})";
 	docker build \
     --squash \
     --force-rm \
+		--build-arg DOCKERFILE_VERSION=${VERSION} \
+		--build-arg VERSION=$(shell jq -r '.tag_name' ${REPO_INFO}) \
+		--build-arg RELEASE=$(shell cat ${UNIT}/VERSION) \
+		--build-arg PROJECT_URL=${PROJECT_URL} \
     -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO}) -f ${UNIT}.Dockerfile  .
 
 image: image/${UNIT}
@@ -109,7 +116,7 @@ image: image/${UNIT}
 lint: lint/${UNIT}
 
 lint/%:
-	dockerfile_lint -f Dockerfile -r linter.yml -p
+	dockerfile_lint -f ${UNIT}.Dockerfile -r linter.yml -p
 
 push/%:
 	@echo "pushing image ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})"
