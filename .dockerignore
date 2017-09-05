@@ -1,0 +1,7 @@
+amazon-ssm-agent
+Makefile
+*.sh
+.gitignore
+*.tmpl
+*.service
+README.md

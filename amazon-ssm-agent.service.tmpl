@@ -1,0 +1,20 @@
+[Unit]
+Description=amazon-ssm-agent
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=on-failure
+RestartSec=30
+RestartPreventExitStatus=5
+SyslogIdentifier=ssm-agent
+ExecStartPre=-/usr/bin/docker kill ${UNIT}
+ExecStartPre=-/usr/bin/docker rm ${UNIT}
+ExecStartPre=/usr/bin/docker pull ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/${UNIT}:${TAG}
+ExecStart=/usr/bin/docker run \
+  -d \
+  --name ${UNIT} \
+  ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/${UNIT}:${TAG}
+
+[Install]
+WantedBy=network-online.target
