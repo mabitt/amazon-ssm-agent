@@ -1,4 +1,4 @@
-FROM scratch
+FROM alpine:3.6
 Maintainer John Torres <enfermo337+github@gmail.com>
 
 ARG PROJECT_URL
@@ -14,9 +14,16 @@ LABEL name="Amazon SSM Agent" \
       version=${VERSION} \
       dockerfile_version=${DOCKERFILE_VERSION}
 
-COPY stage /
 
 USER root
 
-ENTRYPOINT ["/bin/amazon-ssm-agent"]
+RUN apk add --no-cache ca-certificates && \
+  apk update zlib=1.2.11-r0
+
+COPY stage /
+
+VOLUME ["/usr/local/amazon"]
+VOLUME ["/etc/amazon/ssm"]
+
+ENTRYPOINT ["/usr/local/amazon/bin/amazon-ssm-agent"]
 CMD []

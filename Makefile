@@ -24,7 +24,8 @@ SRC_REPO               ?= ${SRC_REPO_OWNER}/${UNIT}
 SRC                    ?= github.com/${SRC_REPO}
 SRC_VERSION            ?= 2.0.922.0
 SRC_DIR                ?= /go/src/${SRC}
-BIN_DIR                ?= /usr/bin
+BIN_DIR                ?= /usr/local/amazon/bin
+LOG_DIR                ?= /var/log/amazon/ssm
 CONF_DIR               ?= /etc/amazon/ssm
 REPO_INFO              ?= .repo.json
 
@@ -98,7 +99,7 @@ bin/%: ${UNIT}
 	  -v ${PWD}/stage${CONF_DIR}:/stage${CONF_DIR} \
 	  -v ${PWD}/${UNIT}:${SRC_DIR} \
 	  golang:${GOLANG_VERSION} \
-	  /bin/sh -c 'apk add --no-cache bash git make && make build-linux && mv bin/linux_amd64/amazon-ssm-agent $$BIN_DIR/amazon-ssm-agent && cp $$SRC_DIR/amazon-ssm-agent.json.template $$CONF_DIR/amazon-ssm-agent.json && cp $$SRC_DIR/seelog_unix.xml $$CONF_DIR/seelog.xml'
+	  /bin/sh -c 'apk add --no-cache bash git make && make build-linux && install -m 500 bin/linux_amd64/* $$BIN_DIR/ && install -m 400 $$SRC_DIR/amazon-ssm-agent.json.template $$CONF_DIR/amazon-ssm-agent.json && install -m 400 $$SRC_DIR/seelog_unix.xml $$CONF_DIR/seelog.xml'
 
 image/%:
 	@echo "building image for ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})";

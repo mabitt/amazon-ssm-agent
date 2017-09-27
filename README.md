@@ -10,6 +10,9 @@ Trying to live the values of Container Linux, I have introduced this as a contai
 
 The result is an Amazon ECS cluster that support SSM.
 
+It is important to note that running SSM in container does not make real sense as you want to expose the real host. Otherwise devices, hostname, IPs, etc will appear to be that of the container.
+This docker image actually just allows for the install to be extracted to the host system. See "Running the agent" below.
+
 ## Building this image
 
 The quickest way to build this package is simply `make all/amazon-ssm-agent`
@@ -47,10 +50,15 @@ Create a snippet similar to:
       RestartSec=30
       RestartPreventExitStatus=5
       SyslogIdentifier=ssm-agent
-      ExecStartPre=-/usr/bin/docker kill amazon-ssm-agent
-      ExecStartPre=-/usr/bin/docker rm amazon-ssm-agent
-      ExecStartPre=/usr/bin/docker pull quay.io/johnt337/amazon-ssm-agent
-      ExecStart=/usr/bin/docker run -d --name amazon-ssm-agent quay.io/johnt337/amazon-ssm-agent
+      ExecStartPre=-/usr/bin/mkdir -p /etc/amazon /home/core/bin
+      ExecStartPre=-/usr/bin/chown core:core /home/core/bin
+      ExecStartPre=-/usr/bin/chmod 750 /home/core/bin
+      ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker run -d --name="ssm-installer" --entrypoint=/usr/bin/true quay.io/johnt337/amazon-ssm-agent'
+      ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker cp ssm-installer:/usr/local/amazon/bin/amazon-ssm-agent /home/core/bin/amazon-ssm-agent'
+      ExecStartPre=-/bin/sh -c '/usr/bin/test ! -d /etc/amazon/ssm && /usr/bin/docker cp ssm-installer:/etc/amazon/ssm /etc/amazon/ssm'
+      ExecStartPre=-/usr/bin/chown core:core /home/core/bin/amazon-ssm-agent
+      ExecStartPre=-/usr/bin/chmod 550 /home/core/bin/amazon-ssm-agent
+      ExecStart=/home/core/bin/amazon-ssm-agent
       ExecStop=/usr/bin/docker stop amazon-ssm-agent
 
       [Install]

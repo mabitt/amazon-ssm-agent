@@ -1,5 +1,5 @@
 [Unit]
-Description=amazon-ssm-agent
+Description=Amazon SSM Agent
 After=docker.service
 Requires=docker.service
 
@@ -8,13 +8,16 @@ Restart=on-failure
 RestartSec=30
 RestartPreventExitStatus=5
 SyslogIdentifier=ssm-agent
-ExecStartPre=-/usr/bin/docker kill ${UNIT}
-ExecStartPre=-/usr/bin/docker rm ${UNIT}
-ExecStartPre=/usr/bin/docker pull ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/${UNIT}:${TAG}
-ExecStart=/usr/bin/docker run \
-  -d \
-  --name ${UNIT} \
-  ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/${UNIT}:${TAG}
+ExecStartPre=-/usr/bin/mkdir -p /etc/amazon /home/core/bin
+ExecStartPre=-/usr/bin/chown core:core /home/core/bin
+ExecStartPre=-/usr/bin/chmod 750 /home/core/bin
+ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker run -d --name="ssm-installer" --entrypoint=/usr/bin/true ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/${UNIT}:${TAG}'
+ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker cp ssm-installer:/usr/local/amazon/bin/amazon-ssm-agent /home/core/bin/amazon-ssm-agent'
+ExecStartPre=-/bin/sh -c '/usr/bin/test ! -d /etc/amazon/ssm && /usr/bin/docker cp ssm-installer:/etc/amazon/ssm /etc/amazon/ssm'
+ExecStartPre=-/usr/bin/chown core:core /home/core/bin/amazon-ssm-agent
+ExecStartPre=-/usr/bin/chmod 550 /home/core/bin/amazon-ssm-agent
+ExecStart=/home/core/bin/amazon-ssm-agent
+ExecStop=/usr/bin/docker stop amazon-ssm-agent
 
 [Install]
 WantedBy=network-online.target
