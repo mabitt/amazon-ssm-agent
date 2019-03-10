@@ -4,30 +4,29 @@ MAKEFLAGS  += --no-builtin-rules
 .DELETE_ON_ERROR:
 
 # app specific naming and options
-DOCKER_REGISTRY        ?= quay.io
-DOCKER_IMAGE_REPO      ?= johnt337
+DOCKER_REGISTRY        ?= docker.io
+DOCKER_IMAGE_REPO      ?= mabitt
 UNIT                   ?= amazon-ssm-agent
 UID                    ?= $(shell id -u)
 USER                   ?= $(shell id -n)
 VERSION                ?= $(shell cat version)
-PROJECT_URL            ?= https://github.com/johnt337/${UNIT}/
+PROJECT_URL            ?= https://github.com/mabitt/${UNIT}/
 
 # version arguments
-GOLANG_VERSION         ?= 1.8.3-alpine3.6
-
-# docker login
-DOCKER_CONFIG          ?= .docker
+GOLANG_VERSION         ?= 1.8
 
 # build time arguments
 SRC_REPO_OWNER         ?= aws
 SRC_REPO               ?= ${SRC_REPO_OWNER}/${UNIT}
 SRC                    ?= github.com/${SRC_REPO}
-SRC_VERSION            ?= 2.0.922.0
+SRC_VERSION            ?= 2.3.444.0
 SRC_DIR                ?= /go/src/${SRC}
 BIN_DIR                ?= /usr/local/amazon/bin
 LOG_DIR                ?= /var/log/amazon/ssm
 CONF_DIR               ?= /etc/amazon/ssm
 REPO_INFO              ?= .repo.json
+
+current_dir = $(shell pwd)
 
 all: help
 
@@ -53,6 +52,7 @@ help:
 	@exit 0
 
 all/%:
+	$(MAKE) clean
 	$(MAKE) get-release-info
 	$(MAKE) download
 	$(MAKE) bin/$*
@@ -77,7 +77,7 @@ gen-systemd-unit:
 	 	-e DOCKER_IMAGE_REPO=${DOCKER_IMAGE_REPO} \
 		-e UNIT=${UNIT} \
 		-e TAG=$(shell jq -r '.tag_name' ${REPO_INFO}) \
-	  -v ${PWD}:/workspace \
+	  -v ${current_dir}:/workspace \
 		-w /workspace \
 		golang:${GOLANG_VERSION} \
 		/bin/sh -c 'apk add --no-cache gettext && cat ${UNIT}.service.tmpl | envsubst > ${UNIT}.service'
@@ -93,18 +93,19 @@ download: ${REPO_INFO}
 bin/%: ${UNIT}
 	docker run \
 	  --rm \
-	  -e SRC_DIR=${SRC_DIR} -e BIN_DIR=/stage${BIN_DIR} -e CONF_DIR=/stage${CONF_DIR} \
 	  -w ${SRC_DIR} \
-	  -v ${PWD}/stage${BIN_DIR}:/stage${BIN_DIR} \
-	  -v ${PWD}/stage${CONF_DIR}:/stage${CONF_DIR} \
-	  -v ${PWD}/${UNIT}:${SRC_DIR} \
+	  -v ${current_dir}/stage${BIN_DIR}:/stage${BIN_DIR} \
+	  -v ${current_dir}/stage${CONF_DIR}:/stage${CONF_DIR} \
+	  -v ${current_dir}/${UNIT}:${SRC_DIR} \
 	  golang:${GOLANG_VERSION} \
-	  /bin/sh -c 'apk add --no-cache bash git make && make build-linux && install -m 500 bin/linux_amd64/* $$BIN_DIR/ && install -m 400 $$SRC_DIR/amazon-ssm-agent.json.template $$CONF_DIR/amazon-ssm-agent.json && install -m 400 $$SRC_DIR/seelog_unix.xml $$CONF_DIR/seelog.xml'
+    /bin/sh -c 'make build-linux  && \
+                install -m 500 bin/linux_amd64/* /stage${BIN_DIR}/ && \
+                install -m 400 ${SRC_DIR}/amazon-ssm-agent.json.template /stage${CONF_DIR}/amazon-ssm-agent.json && \
+                install -m 400 ${SRC_DIR}/seelog_unix.xml /stage${CONF_DIR}/seelog.xml'
 
 image/%:
 	@echo "building image for ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})";
 	docker build \
-    --squash \
     --force-rm \
 		--build-arg DOCKERFILE_VERSION=${VERSION} \
 		--build-arg VERSION=$(shell jq -r '.tag_name' ${REPO_INFO}) \
@@ -121,9 +122,9 @@ lint/%:
 
 push/%:
 	@echo "pushing image ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})"
-	@docker --config=${DOCKER_CONFIG} push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})
+	@docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO})
 	@docker tag ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:$(shell jq -r '.tag_name' ${REPO_INFO}) ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:latest
-	@docker --config=${DOCKER_CONFIG} push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:latest
+	@docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_REPO}/$*:latest
 
 push: push/${UNIT}
 

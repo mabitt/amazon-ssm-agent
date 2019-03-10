@@ -1,5 +1,5 @@
-FROM alpine:3.6
-Maintainer John Torres <enfermo337+github@gmail.com>
+FROM alpine:3.9
+Maintainer MAB <mab+github@mab.net>
 
 ARG PROJECT_URL
 ARG DOCKERFILE_VERSION
