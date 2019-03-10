@@ -53,7 +53,7 @@ Create a snippet similar to:
       ExecStartPre=-/usr/bin/mkdir -p /etc/amazon /home/core/bin
       ExecStartPre=-/usr/bin/chown core:core /home/core/bin
       ExecStartPre=-/usr/bin/chmod 750 /home/core/bin
-      ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker run -d --name="ssm-installer" --entrypoint=/usr/bin/true quay.io/johnt337/amazon-ssm-agent'
+      ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker run -d --name="ssm-installer" --entrypoint=/usr/bin/true mabitt/amazon-ssm-agent'
       ExecStartPre=-/bin/sh -c '/usr/bin/test ! -e /home/core/bin/amazon-ssm-agent && /usr/bin/docker cp ssm-installer:/usr/local/amazon/bin/amazon-ssm-agent /home/core/bin/amazon-ssm-agent'
       ExecStartPre=-/bin/sh -c '/usr/bin/test ! -d /etc/amazon/ssm && /usr/bin/docker cp ssm-installer:/etc/amazon/ssm /etc/amazon/ssm'
       ExecStartPre=-/usr/bin/chown core:core /home/core/bin/amazon-ssm-agent
